@@ -1,0 +1,19 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "hai",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"none\""
+  },
+  "author": "me",
+  "license": "ISC",
+  "dependencies": {
+    "@types/express": "^4.17.1",
+    "@types/node": "^12.7.4",
+    "express": "^4.16.4",
+    "firebase-admin": "^8.0.0",
+    "fs": "0.0.1-security",
+    "ws": "^6.2.1"
+  }
+}
