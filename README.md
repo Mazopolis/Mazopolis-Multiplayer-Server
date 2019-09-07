@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/Mazopolis/Mazopolis-Multiplayer-Server.svg?style=svg)](https://circleci.com/gh/Mazopolis/Mazopolis-Multiplayer-Server)
+
 # Usage
 Make sure you have node installed. To check, run:
 `node -v `
