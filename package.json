@@ -6,10 +6,7 @@
   "scripts": {
     "test": "echo \"none\""
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Mazopolis/Mazopolis-Multiplayer-Server.git"
-  },
+  "repository": "https://github.com/Mazopolis/Mazopolis-Multiplayer-Server.git",
   "author": "me",
   "license": "SEE LICENCE IN LICENCE",
   "dependencies": {
@@ -19,5 +16,6 @@
     "firebase-admin": "^8.0.0",
     "fs": "0.0.1-security",
     "ws": "^6.2.1"
-  }
+  },
+  "private": false
 }
