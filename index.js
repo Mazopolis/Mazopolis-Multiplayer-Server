@@ -1,228 +1,252 @@
-// index.js
-const fs = require('fs')
-const fire = require("firebase-admin")
-fire.initializeApp({
-    credential: fire.credential.cert(require("/home/lawson/serverstuff/server/key.json")),
+/*
+    Mazopolis
+    Multiplayer
+    Server
+    
+    Author: MoonBarc
+    Version: v2.0
+    (c) Copyright MoonBarc, 2019.
+*/
+//  --------------
+//   DEPENDENCIES
+//  --------------
+var app = require("express")(); // ExpressJS + App setup
+var ws = require("ws"); // WebSockets
+var fs = require("fs"); // FS
+var admin = require("firebase-admin"); // Firebase
+admin.initializeApp({
+    credential: admin.credential.cert(require("/home/lawson/serverstuff/server/key.json")),
     databaseURL: 'https://hubbit-mazer.firebaseio.com'
 });
-const db = fire.firestore()
-const avatars = db.collection("avatars")
-const app = require('express')();
-const WebSocket = require('ws')
-const http = require('http').createServer(app);
-const options = {
+//  -----------
+//   FUNCTIONS
+//  -----------
+// Test For Party
+function testForParty(prty) {
+    var r = false;
+    for (var i = 0; i < activeParties.length; i++) {
+        var party = activeParties[i];
+        if (party.id == prty) {
+            r = i;
+        }
+    }
+    return r;
+}
+//  ---------
+//   CLASSES
+//  ---------
+var Point = /** @class */ (function () {
+    function Point(X, Y) {
+        this.x = X;
+        this.y = Y;
+    }
+    return Point;
+}());
+var UserFace = /** @class */ (function () {
+    function UserFace(FaceID) {
+        this.FaceID = FaceID;
+        this.faceId = FaceID;
+        this.url = "/faces/" + FaceID + "/face.png";
+    }
+    return UserFace;
+}());
+var User = /** @class */ (function () {
+    function User(UserFace, Username, PlayerPosition, Connection, UserId) {
+        var _this = this;
+        this.UserFace = UserFace;
+        this.Username = Username;
+        this.PlayerPosition = PlayerPosition;
+        this.Connection = Connection;
+        this.UserId = UserId;
+        this.face = UserFace;
+        this.uid = UserId;
+        this.username = Username;
+        this.position = PlayerPosition;
+        this.connection = Connection;
+        this.isOnline = function () {
+            if (this.connection.readyState = ws.OPEN) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        };
+        this.send = function (event, message) {
+            if (this.isOnline() === true) {
+                message.event = event;
+                var fmsg = JSON.stringify(message);
+                this.connection.send(fmsg);
+            }
+        };
+        this.sendRaw = function (msg) {
+            if (this.isOnline() === true) {
+                var fmsg = JSON.stringify(msg);
+                this.connection.send(fmsg);
+            }
+        };
+        this.connection.on("close", function () {
+            var uid = _this.uid;
+            var partyIndex = testForParty(_this.connection.pid);
+            // if party exists
+            if (typeof partyIndex == "number") {
+                var party = activeParties[partyIndex];
+                party.broadcast("disconnect", { who: uid });
+            }
+        });
+    }
+    return User;
+}());
+// Active Parties
+var activeParties = [];
+var Party = /** @class */ (function () {
+    function Party(PartyName, Leader, IsPrivate) {
+        this.PartyName = PartyName;
+        this.Leader = Leader;
+        this.IsPrivate = IsPrivate;
+        this.members = [];
+        this.name = PartyName;
+        this.private = IsPrivate;
+        this.id = (activeParties.length + 1).toString();
+        this.leader = Leader;
+        // FUNCTIONS
+        this.broadcast = function (event, message) {
+            this.members.forEach(function (user) {
+                message.event = event;
+                user.sendRaw(message);
+            });
+        };
+        this.handleJoin = function (user) {
+            this.broadcast("join", { nickname: user.username, plrface: user.face.faceId, plrsize: 20, who: user.uid });
+            this.members.forEach(function (member) {
+                if (member.isOnline()) {
+                    user.send("join", { nickname: member.username, plrface: member.face.faceId, plrsize: 20, who: member.uid });
+                }
+            });
+            this.members.push(user);
+            user.sendRaw({ event: "success" });
+        };
+    }
+    return Party;
+}());
+// --------------
+//  SERVER SETUP
+// --------------
+var port = 443;
+var http = require('http').createServer(app);
+var options = {
     key: fs.readFileSync("/etc/letsencrypt/live/server.mazopolis.com/privkey.pem"),
     cert: fs.readFileSync('/etc/letsencrypt/live/server.mazopolis.com/cert.pem'),
     ca: fs.readFileSync("/etc/letsencrypt/live/server.mazopolis.com/chain.pem")
 };
-const https = require('https').createServer(options, app)
-app.get('/*', function(req, res) {
-    if(req.secure) {
-        res.send('<h1>hey. this is a server :)</h1><hr><i>have a good life and i hope that u like mazopolis and if u do then good but if not idc so bye</i>');
-    } else {
-        res.redirect('https://server.mazopolis.com')
+var https = require('https').createServer(options, app);
+app.get('/', function (req, res) {
+    if (req.secure) {
+        res.send('<h1>Error: MARV1N</h1><hr><i>ur not supposed to be here. im feeling so depressed.</i><br><img style="width: 100%;height:auto" alt="(insert gif of marvin)" src="https://media1.giphy.com/media/Sz7MJy6cDMZJS/giphy.gif">');
+    }
+    else {
+        res.redirect('https://server.mazopolis.com');
     }
 });
-http.listen(80, function() {
-    console.log('listening on port 80 (for HTTP requests),ws requests dont meet with HTTP.');
+app.get("/createPrivateParty", function (req, res) {
+    admin.auth().verifyIdToken(req.query.token).then(function (user) {
+        var newParty = new Party(req.query.name, user.uid, true);
+        activeParties.push(newParty);
+        res.send(newParty.id);
+    });
 });
-https.listen(443, function() {
-    console.log('listening on port 443 (for HTTPS requests),ws requests meet at 8080')
-})
-
-let connections = []
-
-function getAllPlayers(gameId) {
-    return connections
-}
-let allplayers = []
-const wss = new WebSocket.Server({
+http.listen(80, function () {
+    console.log('HTTP: enabled');
+});
+https.listen(443, function () {
+    console.log('HTTPS: enabled');
+});
+var wss = new ws.Server({
     server: https
-})
-
-function getPlayerByUid(uid) {
-    allplayers.forEach(plr => {
-        if (plr.uid == uid) {
-            return plr
-        }
-    })
-    return null;
-}
-
-function getOpenConnections() {
-    var r = []
-    connections.forEach(el => {
-        if(el.readyState == WebSocket.OPEN) {
-            r.push(el)
-        }
-    })
-    return r
-}
-wss.on('connection', function(ws) {
-    ws.on("close", () => {
-        console.log(ws.uid + " has left.")
-        cmdPrompt()
-        getAllPlayers().forEach(plr => {
-            if(ws.uid && plr.readyState == WebSocket.OPEN) {
-                plr.send(JSON.stringify({
-                    event: "disconnect",
-                    who: ws.uid
-                }))
-            }
-        })
-    })
-    var waitingForToken = true
-    console.log('CONNECTION RECIEVED... WAITING FOR TOKEN...');
-    ws.on("message", function(msg) {
-        var msgObj = JSON.parse(msg)
-        if(waitingForToken == true && msgObj.token) {
-            if(msgObj.event == "subscribe") {
-                // user is subscribing and waiting for parties
-                // TODO: FINISH
-            } else {
-                console.log("prepping to send player data to all clients...")
-                fire.auth().verifyIdToken(msgObj.token).then(user => {
-                    fire.auth().getUser(user.uid).then(userData => {
-                        console.log(user.uid + " has joined as " + userData.displayName)
-                        cmdPrompt()
-                        msgObj.uid = user.uid
-                        ws.send(JSON.stringify({
-                            event: 'success'
-                        }))
-                        ws.uid = msgObj.uid
-                        avatars.doc(msgObj.uid).get().then(doc => {
-                            if(doc.exists) {
-                                allplayers.push({
-                                    uid: msgObj.uid,
-                                    face: doc.data().face,
-                                    pid: msgObj.pid,
-                                })
-                                connections.push(ws)
-                            } else {
-                                allplayers.push({
-                                    uid: msgObj.uid,
-                                    face: "smile",
-                                    pid: msgObj.pid,
-                                })
-                                connections.push(ws)
-                            }
-
-                            var players = getAllPlayers(1)
-                            for(var i = 0; i < allplayers.length; i++) {
-                                var plr = allplayers[i]
-                                var plrConnection = players[i]
-                                for (var i = 0; i < players.length; i++) {
-                                    var el = players[i]
-                                    var plr2 = allplayers[i]
-                                    console.log(plr2.pid, plr.pid)
-                                    if(el.readyState == WebSocket.OPEN && plrConnection.readyState == WebSocket.OPEN, plr2.pid == plr.pid) {
-                                        el.send(JSON.stringify({
-                                            event: "join",
-                                            who: plr.uid,
-                                            plrface: plr.face,
-                                            plrsize: 20,
-                                            nickname: userData.displayName
-                                        }))
-                                    }
-                                }
-
-                            }
-
-                        })
-                    })
-                })
-
-                // end of joining madness
-            }
-            waitingForToken = false
-        } else {
-            if(msgObj.position && waitingForToken == false) {
-                var players = allplayers
-                for(var i = 0;i < players.length;i++) {
-                    var plr = players[i]
-                    var connection = connections[i]
-                    if(connection.readyState == WebSocket.OPEN) {
-                        if(plr.pid == msgObj.pid) {
-                            connection.send(JSON.stringify({
-                                event: "move",
-                                who: msgObj.uid,
-                                pos: msgObj.position
-                            }))
-                        }else{
-                            console.log(plr.pid,msgObj.pid)
-                        }
-                    }else{
-                        console.log("offline user")
-                    }
-                }
-                // end of for loop
-            }
-        }
-    })
 });
-
-const readline = require('readline').createInterface({
-    input: process.stdin,
-    output: process.stdout
-})
-
-function kickall(name) {
-    var params = name.replace("kickall ", "")
-    console.log("[KICKALL] Starting world wide kick...")
-    console.log("[KICKALL] Set reason to", params)
-    for(var i = 0; i < connections.length; i++) {
-        var el = connections[i]
-        var cn = i + 1
-        var mcn = getOpenConnections().length + 1
-        if(el.readyState == WebSocket.OPEN) {
-            el.send(JSON.stringify({
-                event: "kick",
-                reason: params
-            }))
-            console.log("[KICKALL]  Gentely kicking user... [" + cn + "]")
-            setTimeout(() => {
-                if(el.readyState == WebSocket.OPEN) {
-                    console.log("[KICKALL] Forcefully closing connection..." + i)
-                    el.close()
-                    console.log("[KICKALL] Successfully closed connection " + i.toString())
-                } else {
-                    console.log("[KICKALL] Connection was already closed.")
-                }
-
-            }, 5000)
+// Test Variables:
+var testParty = new Party("TestParty", "lawsy", true);
+testParty.id = "deeablo";
+activeParties.push(testParty);
+// ---------------- \\
+// |    SERVER    | \\
+// ---------------- \\
+wss.on("connection", function (con) {
+    console.log("Player connection recieved.");
+    con.on("message", function (msg) {
+        var pMsg;
+        try {
+            pMsg = JSON.parse(msg);
         }
-    }
-    setTimeout(() => {
-        console.log("[KICKALL] Successfully completed ww-kick")
-        cmdPrompt()
-    }, 5100)
-}
-
-function cmdPrompt() {
-    readline.question("[CMD] >> ", (name) => {
-        console.log("[!] Starting execution of command...")
-        if(name.includes("rat")) {
-            connections.forEach(el => {
-                if(el.readyState == WebSocket.OPEN) {
-                    el.send(JSON.stringify({
-                        event: "rat"
-                    }))
-                }
-            })
-        } else if(name.includes("kickall")) {
-            kickall(name)
-        } else if(name.includes("shutdown")) {
-            console.log("[!!] Shutting Down! Please wait as we kick all active users.")
-            kickall(name)
-            setTimeout(() => {
-                process.exit(1)
-            }, 10000);
-        } else {
-            console.log("[!] ERROR! Command not found.")
+        catch (err) {
+            console.warn("Error decoding message!", err, msg);
         }
-        cmdPrompt()
-    })
-}
-setTimeout(function() {
-    cmdPrompt()
-}, 1000)
+        if (pMsg.token) {
+            console.log("Token recieved. Verifying...");
+            admin.auth().verifyIdToken(pMsg.token).then(function (usr) {
+                console.log("Verified as: " + usr.uid);
+                console.log("Now getting user info and constructing User Object");
+                admin.auth().getUser(usr.uid).then(function (user) {
+                    console.log("Got user info! Nickname set as " + user.displayName);
+                    admin.firestore().collection("avatars").doc(usr.uid).get().then(function (doc) {
+                        // does user have avatar?
+                        if (doc.exists) {
+                            console.log("user has avatar");
+                            // yes, set to that.
+                            var position = new Point(0, 0);
+                            var face = new UserFace(doc.data().face);
+                            var theUser = new User(face, user.displayName, position, con, usr.uid);
+                            // Add them to the connection
+                            con.uid = theUser.uid;
+                            con.pid = pMsg.pid;
+                            // If Party Exists,
+                            if (typeof testForParty(pMsg.pid) == "number") {
+                                // it does!
+                                console.log("party exists");
+                                var partyIndex = testForParty(pMsg.pid);
+                                activeParties[partyIndex].handleJoin(theUser);
+                            }
+                            else {
+                                console.warn("user tried to join a party that doesn't exist!", pMsg.pid);
+                            }
+                        }
+                        else {
+                            console.log("user doesn't have avatar");
+                            // nope, set to default (smile)
+                            var position = new Point(0, 0);
+                            var face = new UserFace("smile");
+                            var theUser = new User(face, user.displayName, position, con, usr.uid);
+                            // Add them to the connection
+                            con.uid = theUser.uid;
+                            con.pid = pMsg.pid;
+                            // If Party Exists,
+                            if (typeof testForParty(pMsg.pid) == "number") {
+                                // it does!
+                                console.log("party exists");
+                                var partyIndex = testForParty(pMsg.pid);
+                                activeParties[partyIndex].handleJoin(theUser);
+                            }
+                            else {
+                                console.warn("user tried to join a party that doesn't exist!", pMsg.pid);
+                            }
+                        }
+                    });
+                });
+            });
+        }
+        else if (pMsg.event == "move") {
+            if (typeof testForParty(pMsg.pid) == "number") {
+                // it exists!
+                var prtyIndex = testForParty(pMsg.pid);
+                var party = activeParties[prtyIndex];
+                party.broadcast("move", { who: pMsg.uid, pos: pMsg.position });
+            }
+            else {
+                console.warn("user tried to move in party that doesn't exist!", pMsg.pid);
+            }
+        }
+    });
+    // ----------------
+    //     LEAVING
+    // ----------------
+    // Moved to user class.
+});

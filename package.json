@@ -4,7 +4,7 @@
   "description": "hai",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"none\""
+    "test": "node test.js"
   },
   "repository": "https://github.com/Mazopolis/Mazopolis-Multiplayer-Server.git",
   "author": "me",
