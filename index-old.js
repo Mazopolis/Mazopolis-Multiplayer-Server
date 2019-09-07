@@ -1,8 +1,10 @@
 // index.js
+// WARNING:
+// THIS IS OLD AND MESSY. IT ALSO WILL NOT WORK.
 const fs = require('fs')
 const fire = require("firebase-admin")
 fire.initializeApp({
-    credential: fire.credential.cert(require("/home/lawson/serverstuff/server/key.json")),
+    credential: fire.credential.cert(require("key.json")),
     databaseURL: 'https://hubbit-mazer.firebaseio.com'
 });
 const db = fire.firestore()

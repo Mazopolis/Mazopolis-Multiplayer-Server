@@ -17,7 +17,7 @@ const ws = require("ws") // WebSockets
 const fs = require("fs") // FS
 const admin = require("firebase-admin") // Firebase
 admin.initializeApp({
-    credential: admin.credential.cert(require("/home/lawson/serverstuff/server/key.json")),
+    credential: admin.credential.cert(require("./key.json")),
     databaseURL: 'https://hubbit-mazer.firebaseio.com'
 });
 
