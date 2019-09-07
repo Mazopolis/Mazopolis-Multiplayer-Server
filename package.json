@@ -6,8 +6,12 @@
   "scripts": {
     "test": "echo \"none\""
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mazopolis/Mazopolis-Multiplayer-Server.git"
+  },
   "author": "me",
-  "license": "ISC",
+  "license": "SEE LICENCE IN LICENCE",
   "dependencies": {
     "@types/express": "^4.17.1",
     "@types/node": "^12.7.4",
