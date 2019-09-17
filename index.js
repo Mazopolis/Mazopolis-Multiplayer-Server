@@ -52,7 +52,6 @@ var UserFace = /** @class */ (function () {
 }());
 var User = /** @class */ (function () {
     function User(UserFace, Username, PlayerPosition, Connection, UserId) {
-        var _this = this;
         this.UserFace = UserFace;
         this.Username = Username;
         this.PlayerPosition = PlayerPosition;
@@ -84,15 +83,16 @@ var User = /** @class */ (function () {
                 this.connection.send(fmsg);
             }
         };
-        this.connection.on("close", function () {
-            var uid = _this.uid;
-            var partyIndex = testForParty(_this.connection.pid);
-            // if party exists
-            if (typeof partyIndex == "number") {
-                var party = activeParties[partyIndex];
-                party.broadcast("disconnect", { who: uid });
-            }
-        });
+        // Narrowing down code that could cause problems....
+        // this.connection.on("close", () => {
+        //     var uid = this.uid
+        //     var partyIndex = testForParty(this.connection.pid)
+        //     // if party exists
+        //     if(typeof partyIndex == "number") {
+        //         var party = activeParties[partyIndex]
+        //         party.broadcast("disconnect",{who: uid})
+        //     }
+        // })
     }
     return User;
 }());
