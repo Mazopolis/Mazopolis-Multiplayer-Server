@@ -10,5 +10,7 @@ Thumbs.db
 
 # the key. we don't wanna commit this lol
 key.json
+# this would be a disaster too XD
+ssl-cert
 # this would be a big folder.
 node_modules
